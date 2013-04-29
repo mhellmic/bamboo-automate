@@ -24,7 +24,7 @@ def request(conn, path, params, headers, param_parse_func, response_parse_func):
   req = urllib2.Request(conn.host+path)
   for key, value in headers:
     req.add_header(key, value)
-    
+
   response = conn.opener.open(req, param_parse_func(params))
   res = response_parse_func(response)
 
