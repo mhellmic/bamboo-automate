@@ -3,11 +3,11 @@
  This set of tools should allow to automate some of the task you want to do on Bamboo.
  It uses the rest api whenever possible and the web ui otherwise.
 
- # Install
+ ## Install
 
  * Checkout the source from git
 
- # Structure
+ ## Structure
 
  ```lib/requests.py
  lib/bamboo_commands.py
@@ -17,6 +17,6 @@
  * **lib/bamboo_commands.py** provides bamboo actions like add_job_requirement()
  * **main dir** holds example files. that will work on a local dev bamboo
 
- # Bugs/Todo
+ ## Bugs/Todo
 
  * the external authentication using a cookies file does not work
