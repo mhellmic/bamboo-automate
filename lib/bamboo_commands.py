@@ -1,28 +1,41 @@
 import cookielib
+import logging
+from publicsuffix import PublicSuffixList
 import re
 import requests
 import time
 import urllib2
 
-class Connection:
-  def __init__(self, hostname, baseurl, opener, cookiejar):
-    self.host = hostname
-    self.opener = opener
-    self.cookies = cookiejar
-    self.baseurl = baseurl
+logging.basicConfig(level=logging.DEBUG)
 
-def external_authenticate(host, baseurl, cookiefile):
-  cookiejar = cookielib.MozillaCookieJar(policy=cookielib.DefaultCookiePolicy(rfc2965=True, hide_cookie2=False))
-  cookiejar.load(cookiefile, ignore_discard=True, ignore_expires=True)
+def external_authenticate(host, cookiefile, baseurl=''):
+  retrieval_cookiejar = cookielib.MozillaCookieJar()
+  retrieval_cookiejar.load(cookiefile, ignore_discard=True, ignore_expires=True)
+
+  auth_cookies = []
+  psl = PublicSuffixList()
+  host_publicsuffix = psl.get_public_suffix(host)
+  for c in retrieval_cookiejar:
+    if re.search(host, c.domain):
+      if re.search('JSESSIONID', c.name):
+        logging.debug('%s %s %s', c.domain, c.name, c.value)
+        auth_cookies.append(c)
+    elif re.search(host_publicsuffix, c.domain):
+      if re.search('crowd.token_key', c.name):
+        logging.debug('%s %s %s', c.domain, c.name, c.value)
+        auth_cookies.append(c)
+
+  cookiejar = cookielib.CookieJar()
   opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
-  conn = Connection(host, baseurl, opener, cookiejar)
+  conn = requests.Connection(host, baseurl, opener, cookiejar)
+  conn.auth_cookies = auth_cookies
 
   return conn
 
-def authenticate(host, baseurl, user, passwd):
+def authenticate(host, user, passwd, baseurl=''):
   cookiejar = cookielib.CookieJar()
   opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
-  conn = Connection(host, baseurl, opener, cookiejar)
+  conn = requests.Connection(host, baseurl, opener, cookiejar)
 
   creds = {
       "os_username": user,
@@ -50,7 +63,7 @@ def add_plan_variable(conn, plan_id, var_key, var_value):
 
 def mod_plan_variable(conn, plan_id, var_key, var_value):
   var_id = _find_variable_id(conn, plan_id, var_key)
-  print var_id
+  logging.debug('%s', var_id)
 
   params = {
       "planKey": plan_id,
@@ -128,12 +141,16 @@ def _get_requirements(conn, job_id):
         del_link = href
         req_id = match.group(1)
 
+    if not key:
+      key = td.text.strip()
+
     requirements[key] = (req_id, edit_link, del_link,)
 
   return requirements
-  
+
 def delete_job_requirement(conn, job_id, req_key):
   requirements = _get_requirements(conn, job_id)
+  logging.debug('%s', requirements)
   res = None
   req_id, _, del_link = requirements[req_key]
   if req_id != None:
@@ -144,19 +161,19 @@ def delete_job_requirement(conn, job_id, req_key):
 def delete_job_all_requirements(conn, job_id):
   requirements = _get_requirements(conn, job_id)
   res = None
-  for req_id, _, del_link in requirements.items():
+  for req_id, _, del_link in requirements.itervalues():
     if req_id != None:
       res = requests.post_ui_no_return(conn, del_link, {})
-  
+
   return res
 
-def add_job_requirement(conn, job_id, req_key, req_value):
+def add_job_requirement(conn, job_id, req_key, req_value, req_exists=False):
   params = {
       "Add": "Add",
       "buildKey": job_id,
-      "existingRequirement": None,
+      "existingRequirement": req_key if req_exists else None,
       "regexMatchValue": None,
-      "requirementKey": req_key,
+      "requirementKey": None if req_exists else req_key,
       "requirementMatchType": "equal",
       "requirementMatchValue": req_value,
       "selectFields": "existingRequirement",
@@ -170,24 +187,24 @@ def add_job_requirement(conn, job_id, req_key, req_value):
   return res
 
 def add_job_task(conn, job_id, task_key, task_params):
-  get_params = {
-      "_": int(time.time()),
-      "confirm": "true",
-      "createTaskKey": task_key,
-      "decorator": "nothing",
-      "planKey": job_id
-      }
-  res = requests.get_ui_return_html(
-      conn, 
-      conn.baseurl+'/build/admin/edit/addTask.action', 
-      get_params)
+  #get_params = {
+  #    "_": int(time.time()),
+  #    "confirm": "true",
+  #    "createTaskKey": task_key,
+  #    "decorator": "nothing",
+  #    "planKey": job_id
+  #    }
+  #res = requests.get_ui_return_html(
+  #    conn, 
+  #    conn.baseurl+'/build/admin/edit/addTask.action', 
+  #    get_params)
 
   post_params = {
       "bamboo.successReturnMode": "json",
       "planKey": job_id,
       "checkBoxFields": "taskDisabled",
       "confirm": "true",
-      "createTaskkey": task_key,
+      "createTaskKey": task_key,
       "decorator": "nothing",
       "referer": "/build/admin/edit/editBuildTasks.action?buildKey=LCGDM-PUPPET-JOB1",
       "taskId": 0,
