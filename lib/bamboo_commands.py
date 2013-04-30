@@ -187,19 +187,7 @@ def add_job_requirement(conn, job_id, req_key, req_value, req_exists=False):
   return res
 
 def add_job_task(conn, job_id, task_key, task_params):
-  #get_params = {
-  #    "_": int(time.time()),
-  #    "confirm": "true",
-  #    "createTaskKey": task_key,
-  #    "decorator": "nothing",
-  #    "planKey": job_id
-  #    }
-  #res = requests.get_ui_return_html(
-  #    conn, 
-  #    conn.baseurl+'/build/admin/edit/addTask.action', 
-  #    get_params)
-
-  post_params = {
+  params = {
       "bamboo.successReturnMode": "json",
       "planKey": job_id,
       "checkBoxFields": "taskDisabled",
@@ -210,10 +198,43 @@ def add_job_task(conn, job_id, task_key, task_params):
       "taskId": 0,
       "userDescription": None
       }
-  post_params.update(task_params)
-  res = requests.post_ui_return_html(
+  params.update(task_params)
+  res = requests.post_ui_return_json(
       conn,
       conn.baseurl+'/build/admin/edit/createTask.action',
-      post_params)
+      params)
 
   return res
+
+def _iterate_json_plan_results(request, conn, path, params):
+  start_index = 0
+  params.update({
+    "start-index": start_index
+    })
+  res = request(conn, path, params)
+  logging.debug('%s', res['plans']['max-result'])
+  part_res = res
+  while part_res['plans']['max-result'] >= 25:
+    logging.debug('%s', part_res['plans']['max-result'])
+    start_index = start_index + 25
+    params.update({
+      "start-index": start_index
+      })
+    part_res = request(conn, path, params)
+    res['plans']['plan'].extend(part_res['plans']['plan'])
+
+  return res
+
+def get_plans(conn):
+  params = {}
+  res = _iterate_json_plan_results(
+      requests.get_ui_return_json,
+      conn,
+      conn.baseurl+'/rest/api/latest/plan.json',
+      params)
+
+  return res
+
+def get_plan_keys(conn):
+  plans = get_plans(conn)['plans']['plan']
+  return map(lambda d: d['key'], plans)
