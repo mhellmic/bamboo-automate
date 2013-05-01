@@ -23,6 +23,9 @@ def get_ui_return_json(conn, path, params):
   res, _, _ = request(conn, "GET", path, params, headers, urllib.urlencode, json.load)
   return res
 
+def get_rest_return_json(conn, path, params):
+  return get_ui_return_json(conn, path, params)
+
 def post_ui_no_return(conn, path, params):
   res,_ , _ = request(conn, "POST", path, params, [], urllib.urlencode, id)
 
@@ -43,7 +46,6 @@ def request(conn, method, path, params, headers, param_parse_func, response_pars
     path_and_params = path
 
   req = urllib2.Request(conn.host+path_and_params)
-  logging.debug('%s', req.get_method())
   for key, value in headers:
     req.add_header(key, value)
 

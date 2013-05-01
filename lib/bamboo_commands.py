@@ -73,7 +73,7 @@ def mod_plan_variable(conn, plan_id, var_key, var_value):
       }
   res = requests.post_ui_return_json(
       conn,
-      conn.baseurl+'/build/admin/ajax/updatePlanVariable.action', 
+      conn.baseurl+'/build/admin/ajax/updatePlanVariable.action',
       params)
 
   return res
@@ -86,7 +86,45 @@ def add_mod_plan_variable(conn, plan_id, var_key, var_value):
 
   return res
 
-def _find_variable_id(conn, plan_id, var_key):
+def delete_plan_variable(conn, plan_id, var_key):
+  var_id = _find_variable_id(conn, plan_id, var_key)
+  logging.debug('%s', var_id)
+
+  params = {
+      "planKey": plan_id,
+      "variableId": var_id
+      }
+  res = requests.post_ui_return_json(
+      conn,
+      conn.baseurl+'/build/admin/ajax/deletePlanVariable.action',
+      params)
+
+  return res
+
+def _delete_plan_variable_by_id(conn, plan_id, var_id):
+  logging.debug('%s', var_id)
+
+  params = {
+      "bamboo.successReturnMode": "json",
+      "confirm": "true",
+      "decorator": "nothing",
+      "planKey": plan_id,
+      "variableId": var_id
+      }
+  res = requests.post_ui_return_json(
+      conn,
+      conn.baseurl+'/build/admin/ajax/deletePlanVariable.action',
+      params)
+
+  return res
+
+def delete_plan_all_variables(conn, plan_id):
+  variables = _find_all_variables(conn, plan_id)
+  for var_id in variables.itervalues():
+    logging.debug(var_id)
+    res = _delete_plan_variable_by_id(conn, plan_id, var_id)
+
+def _find_all_variables(conn, plan_id):
   params = {
       "buildKey": plan_id
       }
@@ -95,16 +133,98 @@ def _find_variable_id(conn, plan_id, var_key):
       conn.baseurl+'/chain/admin/config/configureChainVariables.action',
       params)
 
+  variables = {}
+
   match_key = re.compile('key_(\d+)')
   root = res.getroot()
-  variables = root.find_class('inline-edit-field text')
-  for v in variables:
-    if v.value == 'automate':
-      m = match_key.match(v.name)
-      if m:
-        return m.group(1)
-      else:
-        return None 
+  span_varid = root.find_class('inline-edit-field text')
+  for v in span_varid:
+    m = match_key.match(v.name)
+    if m:
+      variables[v.value] = m.group(1)
+
+  return variables
+
+def _find_variable_id(conn, plan_id, var_key):
+  variables = _find_all_variables(conn, plan_id)
+  return variables[var_key]
+
+def get_jobs(conn, plan_key, sort_by_title=False):
+  params = {
+      "buildKey": plan_key
+      }
+  res = requests.get_ui_return_html(
+      conn,
+      conn.baseurl+'/chain/admin/config/editChainDetails.action',
+      params)
+
+  root = res.getroot()
+
+  jobs = {}
+  li_jobkeys = root.findall('.//li[@data-job-key]')
+  for li in li_jobkeys:
+    key = li.attrib['data-job-key']
+    edit_link = li.find('.//a').attrib['href']
+    del_link = None
+    title = li.find('.//a').text
+    description = None
+    try:
+      description = li.attrib['title']
+    except:
+      pass
+
+    if sort_by_title:
+      jobs[title] = (key, description, edit_link, del_link,)
+    else:
+      jobs[key] = (title, description, edit_link, del_link,)
+
+  return jobs
+
+  li_jobkeys = root.findall('.//li[data-job-key=".*"]')
+  logging.debug('%s', li_jobkeys)
+
+def get_tasks(conn, job_id, sort_by_title=False):
+  params = {
+      "buildKey": job_id
+      }
+  res = requests.get_ui_return_html(
+      conn,
+      conn.baseurl+'/build/admin/edit/editBuildTasks.action',
+      params)
+
+  root = res.getroot()
+
+  tasks = {}
+
+  li_items = root.find_class('item')
+  for li in li_items:
+    key = li.attrib['data-item-id']
+    edit_link = None
+    del_link = None
+    title = li.find('.//h3').text
+    description = None
+    try:
+      description = li.find('.//div').text
+    except:
+      pass
+    links = li.findall('.//a')
+    for l in links:
+      href = l.attrib['href']
+      match = re.search('editTask', href)
+      if match:
+        edit_link = href
+      match = re.search('confirmDeleteTask', href)
+      if match:
+        del_link = href
+        req_id = href
+
+    if sort_by_title:
+      tasks[title] = (key, description, edit_link, del_link,)
+    else:
+      tasks[key] = (title, description, edit_link, del_link,)
+
+  return tasks
+
 
 def _get_requirements(conn, job_id):
   params = {
@@ -186,16 +306,46 @@ def add_job_requirement(conn, job_id, req_key, req_value, req_exists=False):
 
   return res
 
-def add_job_task(conn, job_id, task_key, task_params):
+def delete_job_task(conn, job_id, task_id):
+  params = {
+      "bamboo.successReturnMode": "json",
+      "planKey": job_id,
+      "confirm": "true",
+      "createTaskKey": None,
+      "decorator": "nothing",
+      "taskId": task_id
+      }
+  res = requests.post_ui_return_json(
+      conn,
+      conn.baseurl+'/build/admin/edit/deleteTask.action',
+      params)
+
+  return res
+
+def move_job_task(conn, job_id, task_id, finalising=False):
+  params = {
+      #"beforeId": None,
+      "planKey": job_id,
+      "finalising": "true" if finalising else "false",
+      "taskId": task_id
+      }
+  res = requests.post_ui_return_json(
+      conn,
+      conn.baseurl+'/build/admin/ajax/moveTask.action',
+      params)
+
+  return res
+
+def add_job_task(conn, job_id, task_id, task_params):
   params = {
       "bamboo.successReturnMode": "json",
       "planKey": job_id,
       "checkBoxFields": "taskDisabled",
       "confirm": "true",
-      "createTaskKey": task_key,
+      "createTaskKey": task_id,
       "decorator": "nothing",
-      "referer": "/build/admin/edit/editBuildTasks.action?buildKey=LCGDM-PUPPET-JOB1",
       "taskId": 0,
+      "finalising": "true",
       "userDescription": None
       }
   params.update(task_params)
@@ -225,12 +375,25 @@ def _iterate_json_plan_results(request, conn, path, params):
 
   return res
 
-def get_plans(conn):
-  params = {}
+def _get_entity(conn, entity, expand):
+  params = {
+      "expand": expand
+      }
+  res = requests.get_rest_return_json(
+      conn,
+      conn.baseurl+'/rest/api/latest/'+entity,
+      params)
+
+  return res
+
+def get_plans(conn, expand=''):
+  params = {
+      "expand": expand
+      }
   res = _iterate_json_plan_results(
       requests.get_ui_return_json,
       conn,
-      conn.baseurl+'/rest/api/latest/plan.json',
+      conn.baseurl+'/rest/api/latest/plan',
       params)
 
   return res
@@ -238,3 +401,6 @@ def get_plans(conn):
 def get_plan_keys(conn):
   plans = get_plans(conn)['plans']['plan']
   return map(lambda d: d['key'], plans)
+
+def get_projects(conn, expand=''):
+  return _get_entity(conn, 'project', expand)
