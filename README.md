@@ -65,6 +65,3 @@ Get the keys from the bamboo json output
     project_keys = get_project_keys(project_dict)
     plan_keys = get_plan_keys(plan_dict)
 
-## Bugs/Todo
-
-* the external authentication using a cookies file does not work
