@@ -15,12 +15,12 @@ class Connection:
     self.baseurl = baseurl
 
 def get_ui_return_html(conn, path, params):
-  res, _, _ = request(conn, "GET", path, params, [], urllib.urlencode, html.parse)
+  res, _, _ = request(conn, "GET", path, params, [], urllib.urlencode, html.fromstring)
   return res
 
 def get_ui_return_json(conn, path, params):
   headers = [('Accept', 'application/json')]
-  res, _, _ = request(conn, "GET", path, params, headers, urllib.urlencode, json.load)
+  res, _, _ = request(conn, "GET", path, params, headers, urllib.urlencode, json.loads)
   return res
 
 def get_rest_return_json(conn, path, params):
@@ -30,12 +30,12 @@ def post_ui_no_return(conn, path, params):
   res,_ , _ = request(conn, "POST", path, params, [], urllib.urlencode, id)
 
 def post_ui_return_html(conn, path, params):
-  res, _, _ = request(conn, "POST", path, params, [], urllib.urlencode, html.parse)
+  res, _, _ = request(conn, "POST", path, params, [], urllib.urlencode, html.fromstring)
   return res
 
 def post_ui_return_json(conn, path, params):
   headers = [('Accept', 'application/json')]
-  res, _, _ = request(conn, "POST", path, params, headers, urllib.urlencode, json.load)
+  res, _, _ = request(conn, "POST", path, params, headers, urllib.urlencode, json.loads)
   return res
 
 def request(conn, method, path, params, headers, param_parse_func, response_parse_func):
@@ -57,12 +57,19 @@ def request(conn, method, path, params, headers, param_parse_func, response_pars
   if len(cookies) > 0:
     req.add_header('Cookie', cookies)
 
+  logging.debug('%s', req.get_full_url())
   if method == "POST":
     response = conn.opener.open(req, param_parse_func(params))
   elif method == "GET":
     response = conn.opener.open(req)
 
   logging.debug('%s %s', response.geturl(), response.getcode())
-  res = response_parse_func(response)
+  response_content = response.read()
+  try:
+    res = response_parse_func(response_content)
+  except:
+    logging.debug("The response content follows:")
+    logging.debug(response_content)
+    raise
 
   return res, response.geturl(), response.getcode()
