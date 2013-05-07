@@ -136,7 +136,7 @@ def _find_all_variables(conn, plan_id):
   variables = {}
 
   match_key = re.compile('key_(\d+)')
-  root = res.getroot()
+  root = res #.getroot()
   span_varid = root.find_class('inline-edit-field text')
   for v in span_varid:
     m = match_key.match(v.name)
@@ -158,7 +158,7 @@ def get_jobs(conn, plan_key, sort_by_title=False):
       conn.baseurl+'/chain/admin/config/editChainDetails.action',
       params)
 
-  root = res.getroot()
+  root = res #.getroot()
 
   jobs = {}
   li_jobkeys = root.findall('.//li[@data-job-key]')
@@ -192,13 +192,13 @@ def get_tasks(conn, job_id, sort_by_title=False):
       conn.baseurl+'/build/admin/edit/editBuildTasks.action',
       params)
 
-  root = res.getroot()
+  root = res #.getroot()
 
   tasks = {}
 
   li_items = root.find_class('item')
-  for li in li_items:
-    key = li.attrib['data-item-id']
+  for order_id, li in enumerate(li_items, start=1):
+    key = int(li.attrib['data-item-id'])
     edit_link = None
     del_link = None
     title = li.find('.//h3').text
@@ -219,9 +219,10 @@ def get_tasks(conn, job_id, sort_by_title=False):
         req_id = href
 
     if sort_by_title:
-      tasks[title] = (key, description, edit_link, del_link,)
+      title_desc = (title, description)
+      tasks[title_desc] = (key, (title, description), edit_link, del_link, order_id,)
     else:
-      tasks[key] = (title, description, edit_link, del_link,)
+      tasks[key] = (title, description, edit_link, del_link, order_id,)
 
   return tasks
 
@@ -235,7 +236,7 @@ def _get_requirements(conn, job_id):
       conn.baseurl+'/build/admin/edit/defaultBuildRequirement.action',
       params)
 
-  root = res.getroot()
+  root = res #.getroot()
 
   requirements = {}
 
@@ -299,6 +300,7 @@ def add_job_requirement(conn, job_id, req_key, req_value, req_exists=False):
       "selectFields": "existingRequirement",
       "selectFields": "requirementMatchType"
       }
+  logging.debug(params)
   res = requests.post_ui_return_html(
       conn,
       conn.baseurl+'/build/admin/edit/addBuildRequirement.action',
@@ -322,13 +324,27 @@ def delete_job_task(conn, job_id, task_id):
 
   return res
 
-def move_job_task(conn, job_id, task_id, finalising=False):
+def move_job_task(conn, job_id, task_id, finalising=False, beforeId=None, afterId=None):
+  """ Move a task in the runtime order.
+
+  Arguments:
+  conn -- the connection object
+  job_id -- the id of the job
+  task_id -- the id of the task to move
+  finalising -- true, if task should be a final task
+  beforeId -- id of the task which should be before this task
+  afterId -- id of the task which should be after this taks
+
+  """
   params = {
-      #"beforeId": None,
       "planKey": job_id,
       "finalising": "true" if finalising else "false",
       "taskId": task_id
       }
+  if beforeId:
+    params.update({"beforeId": beforeId})
+  if afterId:
+    params.update({"afterId": afterId})
   res = requests.post_ui_return_json(
       conn,
       conn.baseurl+'/build/admin/ajax/moveTask.action',
@@ -398,9 +414,89 @@ def get_plans(conn, expand=''):
 
   return res
 
-def get_plan_keys(conn):
-  plans = get_plans(conn)['plans']['plan']
-  return map(lambda d: d['key'], plans)
-
 def get_projects(conn, expand=''):
   return _get_entity(conn, 'project', expand)
+
+def _check_permission(html_root, usertype, username, permission):
+  if usertype == 'other':
+    usertype = 'role'
+  if username == 'Logged in Users':
+    username = 'ROLE_USER'
+  elif username == 'Anonymous Users':
+    username = 'ROLE_ANONYMOUS'
+  permission_input_field_name = 'bambooPermission_'+usertype+'_'+username+'_'+permission.upper()
+  permission_cell_name = permission_input_field_name+'_cell'
+  permission_xpath = './/td[@id="'+permission_cell_name+'"]/input[@name="'+permission_input_field_name+'"]'
+  logging.debug('xpath to search for permission checkbox = %s' % permission_xpath)
+  el = html_root.find(permission_xpath)
+  if el == None:
+    logging.debug('element not found')
+    return False
+  logging.debug('element is checked = %s', True if 'checked' in el.attrib else False)
+  if 'checked' in el.attrib:
+    return True
+  else:
+    return False
+
+def _get_type_permissions(html_root, usertype):
+  table_user = html_root.findall('.//table[@id="configureBuild'+usertype.capitalize()+'Permissions"]/tr')
+  logging.debug('xpath to search for permission table = %s' % table_user)
+
+  user_permissions = {}
+
+  for tr in table_user:
+    key = None
+    try:
+      key = tr.find('td[1]/a').text
+    except:
+      key = tr.find('td[1]').text
+    read_p = _check_permission(tr, usertype, key, 'READ')
+    write_p = _check_permission(tr, usertype, key, 'WRITE')
+    build_p = _check_permission(tr, usertype, key, 'BUILD')
+    clone_p = _check_permission(tr, usertype, key, 'CLONE')
+    admin_p = _check_permission(tr, usertype, key, 'ADMINISTRATION')
+
+    user_permissions[key] = {'read':read_p,
+                             'write':write_p,
+                             'build':build_p,
+                             'clone':clone_p,
+                             'admin':admin_p}
+
+  return user_permissions
+
+def get_plan_permissions(conn, plan_id):
+  params = {
+      "buildKey": plan_id
+      }
+  res = requests.get_ui_return_html(
+      conn,
+      conn.baseurl+'/chain/admin/config/editChainPermissions.action',
+      params)
+
+  root = res #.getroot()
+
+  user_permissions = _get_type_permissions(root, 'user')
+  group_permissions = _get_type_permissions(root, 'group')
+  other_permissions = _get_type_permissions(root, 'other')
+
+  return {'user': user_permissions,
+          'group': group_permissions,
+          'other': other_permissions}
+
+
+def mod_plan_permissions(conn, plan_id, permission_params):
+  params = {
+      "buildKey": plan_id,
+      "newGroup": None,
+      "newUser": None,
+      "principalType": "User",
+      "save": "Save",
+      "selectFields": "principalType"
+      }
+  params.update(permission_params)
+  res = requests.post_ui_return_html(
+      conn,
+      conn.baseurl+'/chain/admin/config/updateChainPermissions.action',
+      params)
+
+  return res
