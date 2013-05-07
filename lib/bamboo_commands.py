@@ -8,6 +8,12 @@ import urllib2
 
 logging.basicConfig(level=logging.DEBUG)
 
+def _test_authentication(conn):
+  requests.get_ui_return_html(
+      conn,
+      conn.baseurl,
+      {})
+
 def external_authenticate(host, cookiefile, baseurl=''):
   retrieval_cookiejar = cookielib.MozillaCookieJar()
   retrieval_cookiejar.load(cookiefile, ignore_discard=True, ignore_expires=True)
@@ -29,6 +35,9 @@ def external_authenticate(host, cookiefile, baseurl=''):
   opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
   conn = requests.Connection(host, baseurl, opener, cookiejar)
   conn.auth_cookies = auth_cookies
+
+  _test_authentication(conn)
+  logging.debug('authentication test successful')
 
   return conn
 
@@ -447,7 +456,7 @@ def _get_type_permissions(html_root, usertype):
   for tr in table_user:
     key = None
     try:
-      key = tr.find('td[1]/a').text
+      key = tr.find('td[1]/a').attrib['href'].rsplit('/',1)[1]
     except:
       key = tr.find('td[1]').text
     read_p = _check_permission(tr, usertype, key, 'READ')
