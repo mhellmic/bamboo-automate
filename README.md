@@ -180,14 +180,13 @@ since it requests a permission list from bamboo on every invocation.
 * The permissiontype is 'read', 'write', 'build', 'clone', 'admin', or 'all' to change all permissions for this user.
 * The value is either True or False.
 
+
     change_plan_permission(conn,
                            plan_key,
                            ('user','admin','all',True))
-
     change_plan_permission(conn,
                            plan_key,
                            ('group','devel','build',True))
-
     change_plan_permission(conn,
                            plan_key,
                            ('other','Anonymous Users','all',False))
