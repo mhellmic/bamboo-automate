@@ -170,6 +170,28 @@ This function needs the task id, which can be best retrieved with the task descr
       if description == task_description:
         res = delete_job_task(conn, job_id, task_id)
 
+### Change Permissions
+You can change a permission by specifying it as a four-tuple: (usertype, username, permissiontype, value).
+All other values remain unchanged. This function is not very efficient for multiple changes,
+since it requests a permission list from bamboo on every invocation.
+
+* The usertype takes values 'user', 'group' or 'other.
+* The username is the short username in bamboo.
+* The permissiontype is 'read', 'write', 'build', 'clone', 'admin', or 'all' to change all permissions for this user.
+* The value is either True or False.
+
+    change_plan_permission(conn,
+                           plan_key,
+                           ('user','admin','all',True))
+
+    change_plan_permission(conn,
+                           plan_key,
+                           ('group','devel','build',True))
+
+    change_plan_permission(conn,
+                           plan_key,
+                           ('other','Anonymous Users','all',False))
+
 ### Common Operations
 These are hints how to do common operations on results. They might not be optimal solutions.
 
