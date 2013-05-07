@@ -32,9 +32,9 @@ def change_plan_permission(conn, plan_key, permission):
         permissions[usertype][username][key] = value
     else:
       permissions[usertype][username][permissiontype] = value
-  except:
-    logging.debug('Could not change permission: %(t)r' % {'t':permission})
-    raise
+  except KeyError:
+    logging.info('Could not change permission: %(t)r' % {'t':permission})
+    return
 
   mod_plan_permissions(
       conn,
