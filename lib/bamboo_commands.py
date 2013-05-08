@@ -158,9 +158,9 @@ def _find_variable_id(conn, plan_id, var_key):
   variables = _find_all_variables(conn, plan_id)
   return variables[var_key]
 
-def get_jobs(conn, plan_key, sort_by_title=False):
+def get_jobs(conn, plan_id, sort_by_title=False):
   params = {
-      "buildKey": plan_key
+      "buildKey": plan_id
       }
   res = requests.get_ui_return_html(
       conn,
