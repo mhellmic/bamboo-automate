@@ -189,9 +189,6 @@ def get_jobs(conn, plan_id, sort_by_title=False):
 
   return jobs
 
-  li_jobkeys = root.findall('.//li[data-job-key=".*"]')
-  logging.debug('%s', li_jobkeys)
-
 def get_tasks(conn, job_id, sort_by_title=False):
   params = {
       "buildKey": job_id
