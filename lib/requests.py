@@ -64,6 +64,9 @@ def request(conn, method, path, params, headers, param_parse_func, response_pars
     response = conn.opener.open(req)
 
   logging.debug('%s %s', response.geturl(), response.getcode())
+  if response.getcode() > 399:
+    raise urllib2.HTTPError(code=response.getcode())
+
   response_content = response.read()
   try:
     res = response_parse_func(response_content)
