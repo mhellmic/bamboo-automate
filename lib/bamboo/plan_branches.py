@@ -87,3 +87,45 @@ def mod_plan_branch_details(conn, branch_id, branch_params):
       params)
 
   return res
+
+def delete_plan_branch(conn, branch_id):
+  params = {
+      "buildKey": branch_id,
+      "save": "confirm"
+      }
+
+  res = requests.post_ui_return_html(
+      conn,
+      conn.baseurl+'/chain/admin/deleteChain!doDelete.action',
+      params)
+
+  return res
+
+def get_plan_branches(conn, plan_id, sort_by_title=False):
+  params = {
+      "buildKey": plan_id
+      }
+  res = requests.get_ui_return_html(
+      conn,
+      conn.baseurl+'/chain/admin/config/editChainDetails.action',
+      params)
+
+  root = res #.getroot()
+
+  branches = {}
+  li_branches = root.findall('.//ul[@class="branches"]/li')
+  for li in li_branches:
+    key = None
+    try:
+      key = li.find('./a').attrib['id'].rsplit('_',1)[1]
+    except:
+      logging.error('no key for branch found.')
+    edit_link = li.find('./a').attrib['href']
+    title = li.find('./a').text
+
+    if sort_by_title:
+      branches[title] = (key, edit_link,)
+    else:
+      branches[key] = (title, edit_link,)
+
+  return branches
