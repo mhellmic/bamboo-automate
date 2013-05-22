@@ -102,6 +102,11 @@ def delete_plan_branch(conn, branch_id):
   return res
 
 def get_plan_branches(conn, plan_id, sort_by_title=False):
+  """ Retrieve information about all branches of this plan.
+
+  TODO: reimplement this to use the rest api.
+
+  """
   params = {
       "buildKey": plan_id
       }
