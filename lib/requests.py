@@ -20,11 +20,11 @@ def get_ui_return_html(conn, path, params):
 
 def get_ui_return_json(conn, path, params):
   headers = [('Accept', 'application/json')]
-  res, _, _ = request(conn, "GET", path, params, headers, urllib.urlencode, json.loads)
+  try:
+    res, _, _ = request(conn, "GET", path, params, headers, urllib.urlencode, json.loads)
+  except:
+    res = {'status':'NotOK'}
   return res
-
-def get_rest_return_json(conn, path, params):
-  return get_ui_return_json(conn, path, params)
 
 def post_ui_no_return(conn, path, params):
   res,_ , _ = request(conn, "POST", path, params, [], urllib.urlencode, id)
@@ -35,8 +35,14 @@ def post_ui_return_html(conn, path, params):
 
 def post_ui_return_json(conn, path, params):
   headers = [('Accept', 'application/json')]
-  res, _, _ = request(conn, "POST", path, params, headers, urllib.urlencode, json.loads)
+  try:
+    res, _, _ = request(conn, "POST", path, params, headers, urllib.urlencode, json.loads)
+  except:
+    res = {'status':'NotOK'}
   return res
+
+def get_rest_return_json(conn, path, params):
+  return get_ui_return_json(conn, path, params)
 
 def request(conn, method, path, params, headers, param_parse_func, response_parse_func):
   path_and_params = None
