@@ -1,3 +1,7 @@
+from collections import namedtuple
+
+Task = namedtuple('Task', 'task_id title desc edit_link, del_link, order_id')
+
 def _get_value_from_bamboo_dict(bamboo_dict, dict_type, type_value):
   entity_list = bamboo_dict[dict_type+'s'][dict_type]
   return map(lambda d: d[type_value], entity_list)
@@ -19,9 +23,16 @@ def get_plan_keys(bamboo_dict):
 def order_tasks_in_list(list_dict):
   res_list = []
   for key, value in list_dict.iteritems():
-    res_list.append((key, value[0], value[4],))
+    task = None
+    try:
+      int(key)
+      task = Task(key, value[0], value[1], value[2], value[3], value[4])
+    except:
+      task = Task(value[0], value[1][0], value[1][1], value[2], value[3], value[4])
 
-  return sorted(res_list, key=lambda t: t[2])
+    res_list.append(task)
+
+  return sorted(res_list, key=lambda t: t.task_id)
 
 def _correct_permission_usertype(usertype):
   if usertype == 'other':

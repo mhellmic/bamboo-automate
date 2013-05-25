@@ -3,6 +3,14 @@ from manipulate_bamboo_json import *
 import re
 from types import *
 
+def print_result(res, cmd, key):
+  print '%(cmd)s %(key)s %(stat)s' % {'cmd': cmd, 'key': key,
+      'stat': 'SUCCESS' if res['status'] == 'OK' else 'FAILED'}
+
+def print_result_debug(res, cmd, key):
+  logging.debug('%(cmd)s %(key)s %(stat)s' % {'cmd': cmd, 'key': key,
+      'stat': 'SUCCESS' if res['status'] == 'OK' else 'FAILED'})
+
 def change_plan_permission(conn, plan_key, permission):
   """ Change a single permission for a plan.
 
@@ -65,41 +73,46 @@ def get_plans_in_project(conn, project_key, exclude_regex=None):
   plans['plans']['plan'] = filtered_project_plans
   return plans
 
-def move_task_to_position(conn, job_key, task_key, pos):
+def move_task_to_position(conn, job_key, task_key, pos=None, finalising=False):
   """ Reorder a task list.
+
+  This function either moves a task to a given position or puts it last
+  in the finalized section. A specific position in the finalized section
+  cannot be chosen.
 
   Arguments:
   conn -- the connection
-  tasks -- the task dict as given from bamboo
+  job_key -- the job key
   task_key -- the key of the task to be positioned
   pos -- the position to put it, zero-indexed
 
   """
+  assert pos != None or finalising, 'you must provide either the pos or finalising == True'
+
   res = None
   tasks = None
-  task_id = None
-  try:
-    int(task_key)  # it's the ID, not the title
-    tasks = get_tasks(conn, job_key)
-    task_id = task_key
-  except:          # it's the title
-    assert type(task_key) is TupleType, 'task_key is neither int nor tuple: %(tk)r' % {'tk':task_key}
-    tasks = get_tasks(conn, job_key, sort_by_title=True)
-    task_id = tasks[task_key][0]
-
-  assert type(task_id) is IntType, 'task_id is not an int: %(t)r' % {'t':task_id}
+  task_id, tasks = get_task_id_and_dict(conn, job_key, task_key)
 
   tasks_sorted = order_tasks_in_list(tasks)
   task_id_before = None
   task_id_after = None
 
+  if pos == None and finalising:
+    task_id_last = tasks_sorted[-1].task_id
+    # the last id may be our task we want to move
+    if task_id_last == task_id:
+      task_id_last = tasks_sorted[-2].task_id
+    logging.debug('last task id = %(id)s' % {'id':task_id_last})
+    res = move_job_task(conn, job_key, task_id, finalising=True, beforeId=task_id_last)
+    return res
+
   try:
-    task_id_before = tasks_sorted[pos-1][1]
+    task_id_before = tasks_sorted[pos-1].task_id
     assert type(task_id_before) is IntType, 'task_id_before is not an int: %r' % task_id_before
   except:
     pass
   try:
-    task_id_after = tasks_sorted[pos][1]
+    task_id_after = tasks_sorted[pos].task_id
     assert type(task_id_before) is IntType, 'task_id_before is not an int: %r' % task_id_before
   except:
     pass
@@ -114,3 +127,65 @@ def move_task_to_position(conn, job_key, task_key, pos):
     print 'ERROR: moving task %(task)s to position %(pos)s failed.' % {'task': task_key, 'pos': pos }
 
   return res
+
+def _get_id_and_dict(conn, outer_key, inner_key, get_inner_func, inner_key_name):
+  inner_id = None
+  inner_dict = {}
+  try:
+    int(inner_key)  # it's the ID, not the title
+    inner_dict = get_inner_func(conn, outer_key)
+    if inner_key in inner_dict:
+      inner_id = inner_key
+  except:          # it's the title
+    inner_dict = get_inner_func(conn, outer_key, sort_by_title=True)
+    if inner_key in inner_dict:
+      inner_id = inner_dict[inner_key][0]
+
+  return inner_id, inner_dict
+
+
+def get_task_id_and_dict(conn, job_key, task_key):
+  """ Get the task id from a task key and a dict with all tasks in the job
+
+  The task key can be the id or the title. This function determines this,
+  then downloads the appropriate task dict and resolves to the id.
+
+  """
+  return _get_id_and_dict(conn, job_key, task_key, get_tasks, 'task')
+
+def get_job_id_and_dict(conn, plan_key, job_key):
+  """ Get the job id from a job key and a dict with all jobs in the job
+
+  The job key can be the id or the title. This function determines this,
+  then downloads the appropriate job dict and resolves to the id.
+
+  """
+  return _get_id_and_dict(conn, plan_key, job_key, get_jobs, 'job')
+
+def delete_task(conn, plan_key, job_title, task_key):
+  """ Deletes a task from one job.
+
+  This function determines the job id to the given job_title,
+  the finds the task id from the task_key, and tries to delete it.
+
+  """
+  job_id, _ = get_job_id_and_dict(conn, plan_key, job_title)
+  logging.debug('JOB ID = %(job_id)s' % {'job_id': job_id,})
+  task_id, _ = get_task_id_and_dict(conn, job_id, task_key)
+  logging.debug('TASK ID = %(task_id)s' % {'task_id': task_id,})
+
+  return delete_job_task(conn, job_id, task_id)
+
+def insert_task(conn, plan_key, job_title, task_key, task_params, position=None, finalising=False):
+  job_id, _ = get_job_id_and_dict(conn, plan_key, job_title)
+  logging.debug('JOB ID = %(job_id)s' % {'job_id': job_id,})
+  res = add_job_task(conn, job_id, task_key, task_params)
+  print_result_debug(res, 'adding', task_key)
+  task_id = res['taskResult']['task']['id']
+  logging.debug('TASK ID = %(task_id)s' % {'task_id': task_id,})
+
+  res = move_task_to_position(conn, job_id, task_id, position, finalising)
+  print_result_debug(res, 'positioning', task_key)
+
+  return res
+
