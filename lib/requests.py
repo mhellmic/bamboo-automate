@@ -77,8 +77,9 @@ def request(conn, method, path, params, headers, param_parse_func, response_pars
   try:
     res = response_parse_func(response_content)
   except:
-    logging.debug("The response content follows:")
+    logging.debug('The response content follows:')
     logging.debug(response_content)
+    logging.debug('End of response content.')
     raise
 
   return res, response.geturl(), response.getcode()

@@ -183,7 +183,13 @@ def delete_task(conn, plan_key, job_title, task_key):
   task_id, _ = get_task_id_and_dict(conn, job_id, task_key)
   logging.debug('TASK ID = %(task_id)s' % {'task_id': task_id,})
 
-  return delete_job_task(conn, job_id, task_id)
+  try:
+    int(task_id)
+    res = delete_job_task(conn, job_id, task_id)
+  except:
+    res = {'status':'OK'}
+
+  return res
 
 def insert_task(conn, plan_key, job_title, task_key, task_params, position=None, finalising=False):
   job_id, _ = get_job_id_and_dict(conn, plan_key, job_title)
@@ -193,8 +199,9 @@ def insert_task(conn, plan_key, job_title, task_key, task_params, position=None,
   task_id = res['taskResult']['task']['id']
   logging.debug('TASK ID = %(task_id)s' % {'task_id': task_id,})
 
-  res = move_task_to_position(conn, job_id, task_id, position, finalising)
-  print_result_debug(res, 'positioning', task_key)
+  if position != None or finalising == True:
+    res = move_task_to_position(conn, job_id, task_id, position, finalising)
+    print_result_debug(res, 'positioning', task_key)
 
   return res
 
