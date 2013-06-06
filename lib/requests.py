@@ -11,6 +11,11 @@ class Connection:
     self.opener = opener
     self.auth_cookies = auth_cookies
     self.baseurl = baseurl
+    self.connected = False
+
+def get_ui_return_html_status(conn, path, params):
+  page, url, http_code = _request(conn, "GET", path, params, [], urllib.urlencode, html.fromstring)
+  return page, url, http_code
 
 def get_ui_return_html(conn, path, params):
   res, _, _ = _request(conn, "GET", path, params, [], urllib.urlencode, html.fromstring)
