@@ -5,10 +5,24 @@ from .. import requests
 import urllib2
 
 def _test_authentication(conn):
-  requests.get_ui_return_html(
+  """ Tests if the authentication was successful
+
+  The assumption is that the bamboo server uses an external
+  authentication system. If the returned url is from the bamboo
+  server, we assume authentication has succeeded, if it is not
+  we assume we have been redirected to login again.
+  This function is likely to give false positives in other
+  deployments.
+
+  """
+  page, url, http_code = requests.get_ui_return_html_status(
       conn,
       conn.baseurl,
       {})
+  if re.search(conn.host, url):
+    return True
+  else:
+    return False
 
 def external_authenticate(host, cookiefile, baseurl=''):
   retrieval_cookiejar = cookielib.MozillaCookieJar()
@@ -29,8 +43,12 @@ def external_authenticate(host, cookiefile, baseurl=''):
   conn = requests.Connection(host, baseurl, opener, cookiejar)
   conn.auth_cookies = auth_cookies
 
-  _test_authentication(conn)
-  logging.debug('authentication test successful')
+  if _test_authentication(conn):
+    logging.debug('authentication test successful')
+    conn.connected = True
+  else:
+    logging.debug('authentication test failed')
+    conn.connected = False
 
   return conn
 
@@ -47,5 +65,7 @@ def authenticate(host, user, passwd, baseurl=''):
       conn,
       conn.baseurl+'/userlogin!default.action',
       creds)
+
+  conn.connected = True
 
   return conn
