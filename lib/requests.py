@@ -5,8 +5,6 @@ import re
 import urllib
 import urllib2
 
-logging.basicConfig(level=logging.DEBUG)
-
 class Connection:
   def __init__(self, hostname, baseurl, opener, auth_cookies):
     self.host = hostname
