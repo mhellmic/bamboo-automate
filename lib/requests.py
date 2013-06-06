@@ -13,28 +13,28 @@ class Connection:
     self.baseurl = baseurl
 
 def get_ui_return_html(conn, path, params):
-  res, _, _ = request(conn, "GET", path, params, [], urllib.urlencode, html.fromstring)
+  res, _, _ = _request(conn, "GET", path, params, [], urllib.urlencode, html.fromstring)
   return res
 
 def get_ui_return_json(conn, path, params):
   headers = [('Accept', 'application/json')]
   try:
-    res, _, _ = request(conn, "GET", path, params, headers, urllib.urlencode, json.loads)
+    res, _, _ = _request(conn, "GET", path, params, headers, urllib.urlencode, json.loads)
   except:
     res = {'status':'NotOK'}
   return res
 
 def post_ui_no_return(conn, path, params):
-  res,_ , _ = request(conn, "POST", path, params, [], urllib.urlencode, id)
+  res,_ , _ = _request(conn, "POST", path, params, [], urllib.urlencode, id)
 
 def post_ui_return_html(conn, path, params):
-  res, _, _ = request(conn, "POST", path, params, [], urllib.urlencode, html.fromstring)
+  res, _, _ = _request(conn, "POST", path, params, [], urllib.urlencode, html.fromstring)
   return res
 
 def post_ui_return_json(conn, path, params):
   headers = [('Accept', 'application/json')]
   try:
-    res, _, _ = request(conn, "POST", path, params, headers, urllib.urlencode, json.loads)
+    res, _, _ = _request(conn, "POST", path, params, headers, urllib.urlencode, json.loads)
   except:
     res = {'status':'NotOK'}
   return res
@@ -42,7 +42,7 @@ def post_ui_return_json(conn, path, params):
 def get_rest_return_json(conn, path, params):
   return get_ui_return_json(conn, path, params)
 
-def request(conn, method, path, params, headers, param_parse_func, response_parse_func):
+def _request(conn, method, path, params, headers, param_parse_func, response_parse_func):
   path_and_params = None
   if method == "GET":
     path_and_params = path+'?'+urllib.urlencode(params) if params else path
