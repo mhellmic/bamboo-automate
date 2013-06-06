@@ -15,15 +15,16 @@
 %global __os_install_post %__multiple_python_os_install_post
 %endif
 
-Name:		bamboo-automate
-Version:	0.1
-Release:	1%{?dist}
-BuildArch:		noarch
-Summary:	Python libraries to interact with a bamboo server
-Group:		Applications/Internet
-License:	ASL 2.0
-URL:		https://github.com/mhellmic/bamboo-automate
-Source0: https://github.com/mhellmic/bamboo-automate/archive/master.zip
+Name:						bamboo-automate
+Version:				0.1.0
+Release:				1%{?dist}
+BuildArch:			noarch
+Summary:				Python libraries to interact with a bamboo server
+Group:					Applications/Internet
+License:				ASL 2.0
+URL:						https://github.com/mhellmic/bamboo-automate
+Source0:				%{name}-%{version}.tar.gz
+Buildroot:			%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:	cmake
 %if 0%{?with_python26}
