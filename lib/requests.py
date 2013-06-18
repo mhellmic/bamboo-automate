@@ -1,7 +1,9 @@
+from functools import wraps
 from lxml import html
 import json
 import logging
 import re
+import time
 import urllib
 import urllib2
 
@@ -47,6 +49,22 @@ def post_ui_return_json(conn, path, params):
 def get_rest_return_json(conn, path, params):
   return get_ui_return_json(conn, path, params)
 
+def monitoring(func):
+  @wraps(func)
+  def with_time_monitoring(*args, **kwargs):
+    t1 = time.time()
+    time.sleep(2.0)
+    t2 = time.time()
+    logging.debug('slept %(sleep)s seconds.' % {'sleep': (t2-t1)})
+    start_time = time.time()
+    res = func(*args, **kwargs)
+    end_time = time.time()
+    logging.debug('%(fname)s took %(dur)s.' % {'fname':func.__name__,
+                                               'dur':(end_time - start_time)})
+    return res
+  return with_time_monitoring
+
+@monitoring
 def _request(conn, method, path, params, headers, param_parse_func, response_parse_func):
   path_and_params = None
   if method == "GET":
