@@ -76,8 +76,11 @@ def get_plans_in_project(conn, project_key, exclude_regex=None):
   project_plans = filter(lambda d:d['projectKey'] == project_key,
                          plans['plans']['plan'])
 
-  exclude_regex = re.compile(exclude_regex)
-  filtered_project_plans = filter(lambda d:exclude_regex.search(d['shortKey']) == None, project_plans)
+  try:
+    exclude_regex = re.compile(exclude_regex)
+    filtered_project_plans = filter(lambda d:exclude_regex.search(d['shortKey']) == None, project_plans)
+  except:
+    filtered_project_plans = project_plans
 
   plans['plans']['plan'] = filtered_project_plans
   return plans
