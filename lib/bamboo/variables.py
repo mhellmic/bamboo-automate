@@ -1,5 +1,6 @@
 import logging
 from .. import requests
+import re
 
 def add_plan_variable(conn, plan_id, var_key, var_value):
   params = {
@@ -88,7 +89,7 @@ def _find_all_variables(conn, plan_id):
 
   variables = {}
 
-  match_key = re.compile('key_(\d+)')
+  match_key = re.compile('key_(-?\d+)')
   root = res #.getroot()
   span_varid = root.find_class('inline-edit-field text')
   for v in span_varid:
@@ -100,5 +101,6 @@ def _find_all_variables(conn, plan_id):
 
 def _find_variable_id(conn, plan_id, var_key):
   variables = _find_all_variables(conn, plan_id)
+  logging.debug('all variables:\n'+str(variables))
   return variables[var_key]
 
