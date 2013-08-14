@@ -1,8 +1,5 @@
 bamboo-automate Copyright 2013 Martin Philipp Hellmich (mhellmic_AT_gmail)
 
-The publicsuffix library (https://github.com/jpwatts/publicsuffix) is used under the terms of the Apache license and is copyright Watts Lab.
-See https://github.com/jpwatts/publicsuffix/blob/master/LICENSE for details.
-
 The lxml library (http://lxml.de) is used under the terms of the BSD license and is copyright Infrae.
 See git://github.com/lxml/lxml.git, LICENSES.txt for details.
 
