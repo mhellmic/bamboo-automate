@@ -31,3 +31,32 @@ def get_jobs(conn, plan_id, sort_by_title=False):
       jobs[key] = (title, description, edit_link, del_link,)
 
   return jobs
+
+def disable_job(conn, job_id, job_title):
+  params = {
+      "buildKey": job_id,
+      "buildName": job_title,
+      "checkBoxFields": "enabled",
+      "save": "Save"
+      }
+  res = requests.get_ui_return_html(
+      conn,
+      conn.baseurl+'/build/admin/edit/updateBuildDetails.action',
+      params)
+
+  return res;
+
+def enable_job(conn, job_id, job_title):
+  params = {
+      "buildKey": job_id,
+      "buildName": job_title,
+      "checkBoxFields": "enabled",
+      "enabled": "true",
+      "save": "Save"
+      }
+  res = requests.get_ui_return_html(
+      conn,
+      conn.baseurl+'/build/admin/edit/updateBuildDetails.action',
+      params)
+
+  return res;
