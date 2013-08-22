@@ -109,15 +109,16 @@ def move_task_to_position(conn, job_key, task_key, pos=None, finalising=False):
   task_id_before = None
   task_id_after = None
 
-  if pos == None and finalising:
-    task_id_last = tasks_sorted[-1].task_id
+  if pos == -1 or finalising:
+    if len(tasks_sorted) > 0:
+      task_id_last = tasks_sorted[-1].task_id
     # the last id may be our task we want to move
-    if len(tasks_sorted) == 1:
+    if len(tasks_sorted) <= 1:
       task_id_last = None
     elif task_id_last == task_id:
       task_id_last = tasks_sorted[-2].task_id
     logging.debug('last task id = %(id)s' % {'id':task_id_last})
-    res = move_job_task(conn, job_key, task_id, finalising=True, beforeId=task_id_last)
+    res = move_job_task(conn, job_key, task_id, finalising=finalising, beforeId=task_id_last)
     return res
 
   try:
