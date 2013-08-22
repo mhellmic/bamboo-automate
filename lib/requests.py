@@ -53,7 +53,7 @@ def monitoring(func):
   @wraps(func)
   def with_time_monitoring(*args, **kwargs):
     t1 = time.time()
-    time.sleep(2.0)
+    time.sleep(3.0)
     t2 = time.time()
     logging.debug('slept %(sleep)s seconds.' % {'sleep': (t2-t1)})
     start_time = time.time()
