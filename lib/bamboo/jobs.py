@@ -1,6 +1,8 @@
 import logging
 from .. import requests
 
+from collections import OrderedDict
+
 def get_jobs(conn, plan_id, sort_by_title=False):
   params = {
       "buildKey": plan_id
@@ -12,7 +14,8 @@ def get_jobs(conn, plan_id, sort_by_title=False):
 
   root = res #.getroot()
 
-  jobs = {}
+  jobs = OrderedDict()
+
   li_jobkeys = root.findall('.//li[@data-job-key]')
   for li in li_jobkeys:
     key = li.attrib['data-job-key']
@@ -44,7 +47,7 @@ def disable_job(conn, job_id, job_title):
       conn.baseurl+'/build/admin/edit/updateBuildDetails.action',
       params)
 
-  return res;
+  return res
 
 def enable_job(conn, job_id, job_title):
   params = {

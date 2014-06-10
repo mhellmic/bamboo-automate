@@ -105,29 +105,30 @@ def move_task_to_position(conn, job_key, task_key, pos=None, finalising=False):
   tasks = None
   task_id, tasks = get_task_id_and_dict(conn, job_key, task_key)
 
-  tasks_sorted = order_tasks_in_list(tasks)
+  task_list = task_dict_to_list(tasks)
   task_id_before = None
   task_id_after = None
 
   if pos == -1 or finalising:
-    if len(tasks_sorted) > 0:
-      task_id_last = tasks_sorted[-1].task_id
+    if len(task_list) > 0:
+      task_id_last = task_list[-1].task_id
     # the last id may be our task we want to move
-    if len(tasks_sorted) <= 1:
+    if len(task_list) <= 1:
       task_id_last = None
     elif task_id_last == task_id:
-      task_id_last = tasks_sorted[-2].task_id
+      task_id_last = task_list[-2].task_id
     logging.debug('last task id = %(id)s' % {'id':task_id_last})
     res = move_job_task(conn, job_key, task_id, finalising=finalising, beforeId=task_id_last)
     return res
 
   try:
-    task_id_before = tasks_sorted[pos-1].task_id
-    assert type(task_id_before) is IntType, 'task_id_before is not an int: %r' % task_id_before
+    if pos > 0:
+      task_id_before = task_list[pos-1].task_id
+      assert type(task_id_before) is IntType, 'task_id_before is not an int: %r' % task_id_before
   except:
     pass
   try:
-    task_id_after = tasks_sorted[pos].task_id
+    task_id_after = task_list[pos].task_id
     assert type(task_id_before) is IntType, 'task_id_before is not an int: %r' % task_id_before
   except:
     pass

@@ -34,6 +34,20 @@ def order_tasks_in_list(list_dict):
 
   return sorted(res_list, key=lambda t: t.task_id)
 
+def task_dict_to_list(list_dict):
+  res_list = []
+  for key, value in list_dict.iteritems():
+    task = None
+    try:
+      int(key)
+      task = Task(key, value[0], value[1], value[2], value[3], value[4])
+    except:
+      task = Task(value[0], value[1][0], value[1][1], value[2], value[3], value[4])
+
+    res_list.append(task)
+
+  return res_list
+
 def _correct_permission_usertype(usertype):
   if usertype == 'other':
     return 'role'

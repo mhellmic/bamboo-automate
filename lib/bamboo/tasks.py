@@ -2,6 +2,8 @@ import logging
 from .. import requests
 import re
 
+from collections import OrderedDict
+
 def get_tasks(conn, job_id, sort_by_title=False):
   params = {
       "buildKey": job_id
@@ -13,7 +15,7 @@ def get_tasks(conn, job_id, sort_by_title=False):
 
   root = res #.getroot()
 
-  tasks = {}
+  tasks = OrderedDict()
 
   li_items = root.find_class('item')
   for order_id, li in enumerate(li_items, start=1):
@@ -106,5 +108,6 @@ def move_job_task(conn, job_id, task_id, finalising=False, beforeId=None, afterI
       conn,
       conn.baseurl+'/build/admin/ajax/moveTask.action',
       params)
+  logging.debug(params)
 
   return res
