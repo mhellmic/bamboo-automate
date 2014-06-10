@@ -4,13 +4,17 @@ import re
 from .. import requests
 import urllib2
 
+
 def _test_authentication(conn):
   """ Tests if the authentication was successful
 
-  The assumption is that the bamboo server uses an external
+  The first assumption is that the bamboo server uses an external
   authentication system. If the returned url is from the bamboo
   server, we assume authentication has succeeded, if it is not
   we assume we have been redirected to login again.
+  The other hint we take into account is getting redirected to
+  the bamboo login page again when bamboo-internal auth is used.
+
   This function is likely to give false positives in other
   deployments.
 
@@ -19,14 +23,18 @@ def _test_authentication(conn):
       conn,
       conn.baseurl,
       {})
-  if re.search(conn.host, url):
+  if (re.search(conn.host, url) is not None and
+          re.search('userlogin', url) is None):
     return True
   else:
     return False
 
+
 def external_authenticate(host, cookiefile, baseurl=''):
   retrieval_cookiejar = cookielib.MozillaCookieJar()
-  retrieval_cookiejar.load(cookiefile, ignore_discard=True, ignore_expires=True)
+  retrieval_cookiejar.load(cookiefile,
+                           ignore_discard=True,
+                           ignore_expires=True)
 
   auth_cookies = []
   for c in retrieval_cookiejar:
@@ -52,6 +60,7 @@ def external_authenticate(host, cookiefile, baseurl=''):
 
   return conn
 
+
 def authenticate(host, user, passwd, baseurl=''):
   cookiejar = cookielib.CookieJar()
   opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
@@ -60,12 +69,17 @@ def authenticate(host, user, passwd, baseurl=''):
   creds = {
       "os_username": user,
       "os_password": passwd
-      }
+  }
   requests.post_ui_no_return(
       conn,
-      conn.baseurl+'/userlogin!default.action',
+      conn.baseurl + '/userlogin!default.action',
       creds)
 
-  conn.connected = True
+  if _test_authentication(conn):
+    logging.debug('authentication test successful')
+    conn.connected = True
+  else:
+    logging.debug('authentication test failed')
+    conn.connected = False
 
   return conn
