@@ -92,6 +92,8 @@ def move_task_to_position(conn, job_key, task_key, pos=None, finalising=False):
   in the finalized section. A specific position in the finalized section
   cannot be chosen.
 
+  Moving to the last position can be specified with pos=-1.
+
   Arguments:
   conn -- the connection
   job_key -- the job key
