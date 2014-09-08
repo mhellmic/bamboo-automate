@@ -35,7 +35,8 @@ def mod_plan_variable(conn, plan_id, var_key, var_value):
 def add_mod_plan_variable(conn, plan_id, var_key, var_value):
   res = add_plan_variable(conn, plan_id, var_key, var_value)
   if res['status'] == 'ERROR':
-    if 'This Plan already contains a variable named '+var_key in res['fieldErrors']['variableKey']:
+    logging.debug(res['fieldErrors']['variableKey'])
+    if 'This plan already contains a variable named '+var_key in res['fieldErrors']['variableKey']:
       res = mod_plan_variable(conn, plan_id, var_key, var_value)
 
   return res
